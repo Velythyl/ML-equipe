@@ -1,114 +1,127 @@
 import numpy as np
 
 class SVM:
-	def __init__(self,eta, C, niter, batch_size, verbose):
-		self.eta = eta; self.C = C; self.niter = niter; self.batch_size = batch_size; self.verbose = verbose
+    def __init__(self,eta, C, niter, batch_size, verbose):
+        self.eta = eta; self.C = C; self.niter = niter; self.batch_size = batch_size; self.verbose = verbose
 
-	def make_one_versus_all_labels(self, y, m):
-		"""
-		y : numpy array of shape (n,)
-		m : int (in this homework, m will be 10)
-		returns : numpy array of shape (n,m)
-		"""
-		pass
+    def make_one_versus_all_labels(self, y, m):
+        fill = []
+        for label in y:
+            init = [-1] * m
+            init[label] = 1
+            fill.append(init)
+        return np.array(fill)
 
-	def compute_loss(self, x, y):
-		"""
-		x : numpy array of shape (minibatch size, 401)
-		y : numpy array of shape (minibatch size, 10)
-		returns : float
-		"""
-		pass
+    # Loss for a feature vector x, and the label in [-1,1] space y
+    def loss(self, x, y):
+        return np.sum(np.max(1 - self.w.dot(x) * y, axis=1, initial=0))
 
-	def compute_gradient(self, x, y):
-		"""
-		x : numpy array of shape (minibatch size, 401)
-		y : numpy array of shape (minibatch size, 10)
-		returns : numpy array of shape (401, 10)
-		"""
-		pass
+    def compute_loss(self, x, y):
+        """
+        x : numpy array of shape (minibatch size, 401) FEATURES
+        y : numpy array of shape (minibatch size, 10) LABELS in -1,1
+        returns : float
+        """
+        sum = 0
+        for i, xi in enumerate(x):
+            sum += self.loss(xi, y[i])
+        sum *= self.C/self.n    # TODO???
+        return sum
 
-	# Batcher function
-	def minibatch(self, iterable1, iterable2, size=1):
-		l = len(iterable1)
-		n = size
-		for ndx in range(0, l, n):
-			index2 = min(ndx + n, l)
-			yield iterable1[ndx: index2], iterable2[ndx: index2]
+    def compute_gradient(self, x, y):
+        """
+        x : numpy array of shape (minibatch size, 401)
+        y : numpy array of shape (minibatch size, 10)
+        returns : numpy array of shape (401, 10)
+        """
+        pass
 
-	def infer(self, x):
-		"""
-		x : numpy array of shape (number of examples to infer, 401)
-		returns : numpy array of shape (number of examples to infer, 10)
-		"""
-		pass
+    # Batcher function
+    def minibatch(self, iterable1, iterable2, size=1):
+        l = len(iterable1)
+        n = size
+        for ndx in range(0, l, n):
+            index2 = min(ndx + n, l)
+            yield iterable1[ndx: index2], iterable2[ndx: index2]
 
-	def compute_accuracy(self, y_inferred, y):
-		"""
-		y_inferred : numpy array of shape (number of examples, 10)
-		y : numpy array of shape (number of examples, 10)
-		returns : float
-		"""
-		pass
+    def infer(self, x):
+        """
+        x : numpy array of shape (number of examples to infer, 401)
+        returns : numpy array of shape (number of examples to infer, 10)
+        """
+        pass
 
-	def fit(self, x_train, y_train, x_test, y_test):
-		"""
-		x_train : numpy array of shape (number of training examples, 401)
-		y_train : numpy array of shape (number of training examples, 10)
-		x_test : numpy array of shape (number of training examples, 401)
-		y_test : numpy array of shape (number of training examples, 10)
-		returns : float, float, float, float
-		"""
-		self.num_features = x_train.shape[1]
-		self.m = y_train.max() + 1
-		y_train = self.make_one_versus_all_labels(y_train, self.m)
-		y_test = self.make_one_versus_all_labels(y_test, self.m)
-		self.w = np.zeros([self.num_features, self.m])
+    def compute_accuracy(self, y_inferred, y):
+        """
+        y_inferred : numpy array of shape (number of examples, 10)
+        y : numpy array of shape (number of examples, 10)
+        returns : float
+        """
+        pass
 
-		for iteration in range(self.niter):
-			# Train one pass through the training set
-			for x, y in self.minibatch(x_train, y_train, size=self.batch_size):
-				grad = self.compute_gradient(x,y)
-				self.w -= self.eta * grad
+    def fit(self, x_train, y_train, x_test, y_test):
+        self.n = len(x_train) # TODO ????
 
-			# Measure loss and accuracy on training set
-			train_loss = self.compute_loss(x_train,y_train)
-			y_inferred = self.infer(x_train)
-			train_accuracy = self.compute_accuracy(y_inferred, y_train)
+        """
+        x_train : numpy array of shape (number of training examples, 401)
+        y_train : numpy array of shape (number of training examples, 10)
+        x_test : numpy array of shape (number of training examples, 401)
+        y_test : numpy array of shape (number of training examples, 10)
+        returns : float, float, float, float
+        """
+        self.num_features = x_train.shape[1]
+        self.m = y_train.max() + 1
+        y_train = self.make_one_versus_all_labels(y_train, self.m)
+        y_test = self.make_one_versus_all_labels(y_test, self.m)
+        self.w = np.zeros([self.num_features, self.m])
 
-			# Measure loss and accuracy on test set
-			test_loss = self.compute_loss(x_test,y_test)
-			y_inferred = self.infer(x_test)
-			test_accuracy = self.compute_accuracy(y_inferred, y_test)
+        for iteration in range(self.niter):
+            # Train one pass through the training set
+            for x, y in self.minibatch(x_train, y_train, size=self.batch_size):
+                grad = self.compute_gradient(x,y)
+                self.w -= self.eta * grad
 
-			if self.verbose:
-				print("Iteration %d:" % iteration)
-				print("Train accuracy: %f" % train_accuracy)
-				print("Train loss: %f" % train_loss)
-				print("Test accuracy: %f" % test_accuracy)
-				print("Test loss: %f" % test_loss)
-				print("")
+            # Measure loss and accuracy on training set
+            train_loss = self.compute_loss(x_train,y_train)
+            y_inferred = self.infer(x_train)
+            train_accuracy = self.compute_accuracy(y_inferred, y_train)
 
-		return train_loss, train_accuracy, test_loss, test_accuracy
+            # Measure loss and accuracy on test set
+            test_loss = self.compute_loss(x_test,y_test)
+            y_inferred = self.infer(x_test)
+            test_accuracy = self.compute_accuracy(y_inferred, y_test)
+
+            if self.verbose:
+                print("Iteration %d:" % iteration)
+                print("Train accuracy: %f" % train_accuracy)
+                print("Train loss: %f" % train_loss)
+                print("Test accuracy: %f" % test_accuracy)
+                print("Test loss: %f" % test_loss)
+                print("")
+
+        return train_loss, train_accuracy, test_loss, test_accuracy
+
+temp = SVM(2,3,3,3,True)
+print(temp.make_one_versus_all_labels( [1, 0, 2] , 4))
 
 if __name__ == "__main__":
-	# Load the data files
-	print("Loading data...")
-	x_train = np.load("train_features.npy")
-	x_test = np.load("test_features.npy")
-	y_train = np.load("train_labels.npy")
-	y_test = np.load("test_labels.npy")
+    # Load the data files
+    print("Loading data...")
+    x_train = np.load("train_features.npy")
+    x_test = np.load("test_features.npy")
+    y_train = np.load("train_labels.npy")
+    y_test = np.load("test_labels.npy")
 
-	print("Fitting the model...")
-	svm = SVM(eta=0.001, C=30, niter=200, batch_size=5000, verbose=False)
-	train_loss, train_accuracy, test_loss, test_accuracy = svm.fit(x_train, y_train, x_test, y_test)
+    print("Fitting the model...")
+    svm = SVM(eta=0.001, C=30, niter=200, batch_size=5000, verbose=False)
+    train_loss, train_accuracy, test_loss, test_accuracy = svm.fit(x_train, y_train, x_test, y_test)
 
-	# # to infer after training, do the following:
-	# y_inferred = svm.infer(x_test)
+    # # to infer after training, do the following:
+    # y_inferred = svm.infer(x_test)
 
-	## to compute the gradient or loss before training, do the following:
-	# y_train_ova = svm.make_one_versus_all_labels(y_train, 10) # one-versus-all labels
-	# svm.w = np.zeros([401, 10])
-	# grad = svm.compute_gradient(x_train, y_train_ova)
-	# loss = svm.compute_loss(x_train, y_train_ova)
+    ## to compute the gradient or loss before training, do the following:
+    # y_train_ova = svm.make_one_versus_all_labels(y_train, 10) # one-versus-all labels
+    # svm.w = np.zeros([401, 10])
+    # grad = svm.compute_gradient(x_train, y_train_ova)
+    # loss = svm.compute_loss(x_train, y_train_ova)
 
