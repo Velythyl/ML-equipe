@@ -14,7 +14,7 @@ class SVM:
 
     # Loss for a feature vector x, and the label in [-1,1] space y
     def loss(self, x, y):
-        return np.sum(np.max(1 - self.w.dot(x) * y, axis=1, initial=0))
+        return np.sum(np.max(1 - np.multiply(self.w.dot(x), y), axis=1, initial=0))
 
     def compute_loss(self, x, y):
         """
