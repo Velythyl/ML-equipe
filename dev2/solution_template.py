@@ -5,16 +5,16 @@ class SVM:
         self.eta = eta; self.C = C; self.niter = niter; self.batch_size = batch_size; self.verbose = verbose
 
     def make_one_versus_all_labels(self, y, m):
-        fill = []
-        for label in y:
-            init = [-1] * m
-            init[label] = 1
-            fill.append(init)
-        return np.array(fill)
+        fill = np.full((len(y), m), -1)
+        for i, label in enumerate(y):
+            fill[i][label] = 1
+        return fill
 
-    # Loss for a feature vector x, and the label in [-1,1] space y
-    def loss(self, x, y):
-        return np.sum(np.max(1 - np.multiply(self.w.dot(x), y), axis=1, initial=0))
+    def loss(self, feature, label):
+        feature_weights = self.w.T.dot(feature)
+        label_tested = np.reshape(np.multiply(feature_weights, label), (10,1))
+
+        return np.max(1 - label_tested, axis=1, initial=0)
 
     def compute_loss(self, x, y):
         """
@@ -24,9 +24,12 @@ class SVM:
         """
         sum = 0
         for i, xi in enumerate(x):
-            sum += self.loss(xi, y[i])
-        sum *= self.C/self.n    # TODO???
-        return sum
+            sum += np.sum(self.loss(xi, y[i]))
+        sum *= self.C/self.batch_size
+
+        weight_stuff = np.sum(np.power(np.linalg.norm(self.w, axis=1), 2)) / 2
+
+        return weight_stuff + sum
 
     def compute_gradient(self, x, y):
         """
@@ -34,7 +37,17 @@ class SVM:
         y : numpy array of shape (minibatch size, 10)
         returns : numpy array of shape (401, 10)
         """
-        pass
+        losses = []
+        for i, xi in enumerate(x):
+            losses.append(self.loss(xi, y[i]))
+
+
+
+        gradient = np.zeros(self.w.shape)
+        for i, loss in enumerate(losses):
+            np.multiply(x, y)
+
+        init = -2 * self.hinge_loss()
 
     # Batcher function
     def minibatch(self, iterable1, iterable2, size=1):
@@ -60,8 +73,6 @@ class SVM:
         pass
 
     def fit(self, x_train, y_train, x_test, y_test):
-        self.n = len(x_train) # TODO ????
-
         """
         x_train : numpy array of shape (number of training examples, 401)
         y_train : numpy array of shape (number of training examples, 10)
@@ -73,7 +84,7 @@ class SVM:
         self.m = y_train.max() + 1
         y_train = self.make_one_versus_all_labels(y_train, self.m)
         y_test = self.make_one_versus_all_labels(y_test, self.m)
-        self.w = np.zeros([self.num_features, self.m])
+        self.w = np.full([self.num_features, self.m], 1)
 
         for iteration in range(self.niter):
             # Train one pass through the training set
