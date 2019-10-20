@@ -1,5 +1,8 @@
 import numpy as np
 
+def coerce(vector):
+    return np.reshape(vector, (len(vector), 1))
+
 class SVM:
     def __init__(self,eta, C, niter, batch_size, verbose):
         self.eta = eta; self.C = C; self.niter = niter; self.batch_size = batch_size; self.verbose = verbose
@@ -10,11 +13,17 @@ class SVM:
             fill[i][label] = 1
         return fill
 
-    def loss(self, feature, label):
-        feature_weights = self.w.T.dot(feature)
-        label_tested = np.reshape(np.multiply(feature_weights, label), (10,1))
+    # For a w_v weight vector, a features matrix, and the indicating function appropriate for w_v for features
+    # ex self.loss(self.w.T[0].T, x, y[:,0])
+    def loss(self, w_v, features, labels):
+        feature_weights = features.dot(w_v)
+        label_tested = coerce(feature_weights * labels)   # why le reshape necessaire?
 
-        return np.max(1 - label_tested, axis=1, initial=0)
+        return coerce(np.max(1 - label_tested, axis=1, initial=0))
+
+    def for_wv_in_w(self):
+        for i, wi in enumerate(self.w.T):
+            yield i, wi.T
 
     def compute_loss(self, x, y):
         """
@@ -23,9 +32,9 @@ class SVM:
         returns : float
         """
         sum = 0
-        for i, xi in enumerate(x):
-            sum += np.sum(self.loss(xi, y[i]))
-        sum *= self.C/self.batch_size
+        for i, wi in self.for_wv_in_w():
+            sum += np.sum(np.power(self.loss(wi, x, y[:, i]), 2))
+        sum *= self.C / self.batch_size
 
         weight_stuff = np.sum(np.power(np.linalg.norm(self.w, axis=1), 2)) / 2
 
@@ -37,17 +46,19 @@ class SVM:
         y : numpy array of shape (minibatch size, 10)
         returns : numpy array of shape (401, 10)
         """
-        losses = []
-        for i, xi in enumerate(x):
-            losses.append(self.loss(xi, y[i]))
 
+        gradient = np.zeros(self.w.shape).T
+        for i, wi in self.for_wv_in_w():
+            labels = y.T[i]
 
+            loss = self.loss(wi, x, labels)
 
-        gradient = np.zeros(self.w.shape)
-        for i, loss in enumerate(losses):
-            np.multiply(x, y)
+            per_feat = loss * x
+            tested = coerce(labels) * per_feat
+            pre_gradient = np.sum(tested, axis=0)
+            gradient[i] = ((-2*self.C)/self.batch_size) * pre_gradient
 
-        init = -2 * self.hinge_loss()
+        return gradient.T
 
     # Batcher function
     def minibatch(self, iterable1, iterable2, size=1):
@@ -84,13 +95,16 @@ class SVM:
         self.m = y_train.max() + 1
         y_train = self.make_one_versus_all_labels(y_train, self.m)
         y_test = self.make_one_versus_all_labels(y_test, self.m)
-        self.w = np.full([self.num_features, self.m], 1)
+        self.w = np.zeros([self.num_features, self.m])
 
         for iteration in range(self.niter):
+            print(iteration, "of ", self.niter)
+
             # Train one pass through the training set
             for x, y in self.minibatch(x_train, y_train, size=self.batch_size):
                 grad = self.compute_gradient(x,y)
                 self.w -= self.eta * grad
+
 
             # Measure loss and accuracy on training set
             train_loss = self.compute_loss(x_train,y_train)
