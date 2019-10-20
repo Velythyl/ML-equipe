@@ -42,12 +42,7 @@ class SVM:
         y : numpy array of shape (minibatch size, 10) LABELS in -1,1
         returns : float
         """
-        sums = 0#[]
-        for i, wi in self.for_wv_in_w():
-            loss = self.loss(wi, x, y[:, i])
-            pwr = np.power(loss, 2)
-            sums += np.sum(pwr) #.append(np.sum(pwr))
-        sums = self.C / self.batch_size * sums# np.array(sums)
+        sums = self.group_loss(x, y, pwr=True)
 
         w_norm = np.linalg.norm(self.w, axis=0)
         w_pwr = np.power(w_norm, 2)
@@ -63,6 +58,9 @@ class SVM:
         """
 
         gradient = np.zeros(self.w.shape).T
+
+
+
         for i, wi in self.for_wv_in_w():
             labels = y.T[i]
 
