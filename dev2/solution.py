@@ -21,7 +21,7 @@ class SVM:
 
         maxed = np.max(1 - label_tested, axis=1, initial=0)
 
-        return coerce(maxed) # TODO pk le /10 ??????
+        return coerce(maxed)
 
     def group_loss(self, x, y, pwr=False):
         sums = np.zeros(self.w.shape[1])
@@ -30,7 +30,7 @@ class SVM:
             if pwr:
                 loss = np.power(loss, 2)
             sums[i] = np.sum(loss)
-        return sums * self.C / self.batch_size
+        return sums * self.C / len(x)
 
     def for_wv_in_w(self):
         for i, wi in enumerate(self.w.T):
@@ -42,13 +42,13 @@ class SVM:
         y : numpy array of shape (minibatch size, 10) LABELS in -1,1
         returns : float
         """
-        sums = self.group_loss(x, y, pwr=True)
+        sums = np.sum(self.group_loss(x,y,True))
 
         w_norm = np.linalg.norm(self.w, axis=0)
         w_pwr = np.power(w_norm, 2)
         weight_stuff = np.sum(w_pwr) / 2
 
-        return weight_stuff + np.mean(sums)
+        return weight_stuff + sums
 
     def compute_gradient(self, x, y):
         """
@@ -59,19 +59,15 @@ class SVM:
 
         gradient = np.zeros(self.w.shape).T
 
-
-
         for i, wi in self.for_wv_in_w():
             labels = y.T[i]
 
             loss = self.loss(wi, x, labels)
 
-            temp = np.sum(loss) * self.C / self.batch_size
-
             per_feat = loss * x
             tested = coerce(labels) * per_feat
             pre_gradient = np.sum(tested, axis=0)
-            gradient[i] = ((-2*self.C)/self.batch_size) * pre_gradient
+            gradient[i] = ((-2*self.C)/len(x)) * pre_gradient
             gradient[i] += wi   #
 
         return gradient.T
@@ -124,8 +120,6 @@ class SVM:
         self.w = np.zeros([self.num_features, self.m])
 
         for iteration in range(self.niter):
-            print(iteration, "of ", self.niter)
-
             # Train one pass through the training set
             for x, y in self.minibatch(x_train, y_train, size=self.batch_size):
                 grad = self.compute_gradient(x,y)
@@ -164,7 +158,7 @@ if __name__ == "__main__":
     svm = SVM(eta=0.001, C=30, niter=200, batch_size=5000, verbose=True)
 
     print("Fitting the model...")
-    #train_loss, train_accuracy, test_loss, test_accuracy = svm.fit(x_train, y_train, x_test, y_test)
+    train_loss, train_accuracy, test_loss, test_accuracy = svm.fit(x_train, y_train, x_test, y_test)
 
     # # to infer after training, do the following:
     #y_inferred = svm.infer(x_test)
