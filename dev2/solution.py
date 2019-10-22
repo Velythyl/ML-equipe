@@ -180,9 +180,10 @@ def plotit():
             plt.plot(x_axis, dico[c][attr], label="C value: "+str(c))
 
         if attr_has_loss:
-            plt.ylabel(attr+" (%)")
-        else:
+            plt.yscale("log")
             plt.ylabel(attr)
+        else:
+            plt.ylabel(attr+" (1 = 100%)")
 
         plt.legend(loc='upper left')
         plt.xlabel("Epochs")
