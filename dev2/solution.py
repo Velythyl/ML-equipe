@@ -23,15 +23,6 @@ class SVM:
 
         return coerce(maxed)
 
-    def group_loss(self, x, y, pwr=False):
-        sums = np.zeros(self.w.shape[1])
-        for i, wi in self.for_wv_in_w():
-            loss = self.loss(wi, x, y[:, i])
-            if pwr:
-                loss = np.power(loss, 2)
-            sums[i] = np.sum(loss)
-        return sums * self.C / len(x)
-
     def for_wv_in_w(self):
         for i, wi in enumerate(self.w.T):
             yield i, wi.T
@@ -42,7 +33,12 @@ class SVM:
         y : numpy array of shape (minibatch size, 10) LABELS in -1,1
         returns : float
         """
-        sums = np.sum(self.group_loss(x,y,True))
+        sums = 0
+        for i, wi in self.for_wv_in_w():
+            loss = self.loss(wi, x, y[:, i])
+            pwr = np.power(loss, 2)
+            sums += np.sum(pwr)
+        sums *= self.C / len(x)
 
         w_norm = np.linalg.norm(self.w, axis=0)
         w_pwr = np.power(w_norm, 2)
@@ -125,7 +121,6 @@ class SVM:
                 grad = self.compute_gradient(x,y)
                 self.w -= self.eta * grad
 
-
             # Measure loss and accuracy on training set
             train_loss = self.compute_loss(x_train,y_train)
             y_inferred = self.infer(x_train)
@@ -135,6 +130,9 @@ class SVM:
             test_loss = self.compute_loss(x_test,y_test)
             y_inferred = self.infer(x_test)
             test_accuracy = self.compute_accuracy(y_inferred, y_test)
+
+            if __name__ == "__main__":
+                saveit(self.C, train_loss, train_accuracy, test_loss, test_accuracy)
 
             if self.verbose:
                 print("Iteration %d:" % iteration)
@@ -146,6 +144,51 @@ class SVM:
 
         return train_loss, train_accuracy, test_loss, test_accuracy
 
+attr_list = ["Train loss", "Train accuracy", "Test loss", "Test accuracy"]
+c_list = [0.1, 1, 30, 50]
+dico = {}
+for c in c_list:
+    temp = {}
+    for attr in attr_list:
+        temp[attr] = []
+    dico[c] = temp
+
+def saveit(c, train_loss, train_acc, test_loss, test_acc):
+    global dico
+    temp = dico[c]
+    temp["Train loss"].append(train_loss)
+    temp["Train accuracy"].append(train_acc)
+    temp["Test loss"].append(test_loss)
+    temp["Test accuracy"].append(test_acc)
+
+    print(dico)
+
+def plotit():
+    global dico
+    print(dico[1][attr_list[0]])
+    x_axis = list(range(len(dico[1][attr_list[0]])))
+
+    import matplotlib.pyplot as plt
+
+    for attr in attr_list:
+        attr_has_loss = "loss" in attr
+
+        for c in [0.1, 1, 30, 50]:
+            if c == 50 and attr_has_loss:
+                continue
+
+            plt.plot(x_axis, dico[c][attr], label="C value: "+str(c))
+
+        if attr_has_loss:
+            plt.ylabel(attr+" (%)")
+        else:
+            plt.ylabel(attr)
+
+        plt.legend(loc='upper left')
+        plt.xlabel("Epochs")
+        plt.title(attr)
+        plt.show()
+
 if __name__ == "__main__":
 
     # Load the data files
@@ -155,10 +198,10 @@ if __name__ == "__main__":
     y_train = np.load("train_labels.npy")
     y_test = np.load("test_labels.npy")
 
-    svm = SVM(eta=0.001, C=30, niter=200, batch_size=5000, verbose=True)
-
-    print("Fitting the model...")
-    train_loss, train_accuracy, test_loss, test_accuracy = svm.fit(x_train, y_train, x_test, y_test)
+    for c in c_list:
+        svm = SVM(eta=0.001, C=c, niter=200, batch_size=5000, verbose=True)
+        print("Fitting the model...")
+        train_loss, train_accuracy, test_loss, test_accuracy = svm.fit(x_train, y_train, x_test, y_test)
 
     # # to infer after training, do the following:
     #y_inferred = svm.infer(x_test)
@@ -170,3 +213,5 @@ if __name__ == "__main__":
     loss = svm.compute_loss(x_train, y_train_ova)
     print(loss)
     print(grad)
+
+    plotit()
