@@ -41,6 +41,17 @@ class NN(object):
 
         self.weights = {}
         # self.weights is a dictionary with keys W1, b1, W2, b2, ..., Wm, Bm where m - 1 is the number of hidden layers
+
+        """
+        Okay so! 
+            dims[1] est juste la dimension de l'input du NN. Genre le nb de shit que le premier layer recoit
+            dims[1] est le nombre de classes
+        Donc dans le fond, dims c'est ce qu'y manque a hidden_dims: c'est la couche d'input et la couche finale ish?
+            self.hidden_dims[i] est juste le nombre de neuronnes à la couche i
+            len(self.hidden_dims) est donc le nombre de couches
+        """
+
+
         all_dims = [dims[0]] + list(self.hidden_dims) + [dims[1]]
         for layer_n in range(1, self.n_hidden + 2):
             # WRITE CODE HERE
