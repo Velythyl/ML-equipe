@@ -2,8 +2,10 @@ import math
 import pickle
 import random
 
-import numpy as np
-
+try:
+    import cupy as np
+except ModuleNotFoundError:
+    import numpy as np
 
 class NN(object):
     def __init__(self,
@@ -124,7 +126,12 @@ class NN(object):
         # cache is a dictionary with keys Z0, A0, ..., Zm, Am where m - 1 is the number of hidden layers
         # Ai corresponds to the preactivation at layer i, Zi corresponds to the activation at layer i
         # WRITE CODE HERE
-        pass
+
+        for layer_n in range(1, self.n_hidden + 2):
+            preactivation = self.weights[f"W{layer_n}"]*cache[f"Z{layer_n-1}"] + self.weights[f"b{layer_n}"]
+            cache[f"A{layer_n}"] = preactivation
+            cache[f"Z{layer_n}"] = self.activation(preactivation)
+
         return cache
 
     def backward(self, cache, labels):
@@ -136,14 +143,14 @@ class NN(object):
         return grads
 
     def update(self, grads):
-        for layer in range(1, self.n_hidden + 2):
-            # WRITE CODE HERE
-            pass
+        for layer_n in range(1, self.n_hidden + 2):
+            self.weights[f"W{layer_n}"] -= self.lr * grads[f"dW{layer_n}"]
+            self.weights[f"b{layer_n}"] -= self.lr * grads[f"db{layer_n}"]
 
     def one_hot(self, y):
-        # WRITE CODE HERE
-        pass
-        return 0
+        ret = np.zeros((len(y), self.n_classes))
+        ret[np.arange(len(y)), y] = 1
+        return ret
 
     def loss(self, prediction, labels):
         prediction[np.where(prediction < self.epsilon)] = self.epsilon
@@ -172,8 +179,12 @@ class NN(object):
             for batch in range(n_batches):
                 minibatchX = X_train[self.batch_size * batch:self.batch_size * (batch + 1), :]
                 minibatchY = y_onehot[self.batch_size * batch:self.batch_size * (batch + 1), :]
-                # WRITE CODE HERE
-                pass
+
+                # MA PARTIE
+                forward = self.forward(minibatchX)
+                backward = self.backward(forward, minibatchY)
+                self.update(backward)
+                # FIN MA PARTIE
 
             X_train, y_train = self.train
             train_loss, train_accuracy, _ = self.compute_loss_and_accuracy(X_train, y_train)
@@ -189,6 +200,31 @@ class NN(object):
 
     def evaluate(self):
         X_test, y_test = self.test
-        # WRITE CODE HERE
-        pass
-        return 0
+        loss, accuracy, predictions = self.compute_loss_and_accuracy(X_test, y_test)
+        return loss, accuracy
+
+#BONUS
+import matplotlib.pyplot as plt
+def bonus_1():
+    random.seed(0)
+    nn = NN(lr=0.003, batch_size=100)
+
+    epochs_n = 50
+
+    nn.train_loop(epochs_n)
+
+    epochs = list(np.arange(epochs_n))
+
+    train_acc = nn.train_logs['train_accuracy']
+    valid_acc = nn.train_logs['validation_accuracy']
+    plt.plot(epochs ,train_acc , label="Train accuracy")
+    plt.plot(epochs , valid_acc, label="Validation accuracy")
+    plt.legend()
+    plt.show()
+
+    train_loss = nn.train_logs['train_loss']
+    valid_loss = nn.train_logs['validation_loss']
+    plt.plot(epochs , train_loss, label="Train loss")
+    plt.plot(epochs , valid_loss, label="Validation loss")
+    plt.legend()
+    plt.show()
