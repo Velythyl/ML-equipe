@@ -1,4 +1,7 @@
+import math
 import pickle
+import random
+
 import numpy as np
 
 
@@ -54,52 +57,67 @@ class NN(object):
 
         all_dims = [dims[0]] + list(self.hidden_dims) + [dims[1]]
         for layer_n in range(1, self.n_hidden + 2):
+            bound = 1/math.sqrt(all_dims[layer_n])
+
+            self.weights[f"W{layer_n}"] = random.uniform(-bound, bound)
             # WRITE CODE HERE
             self.weights[f"b{layer_n}"] = np.zeros((1, all_dims[layer_n]))
 
     def relu(self, x, grad=False):
+        isnt_arr = not (type(x) is np.array)
+        if isnt_arr:
+            x = np.array([x])
+        else:
+            x = x.copy()
+
         if grad:
-            # WRITE CODE HERE
-            pass
-        # WRITE CODE HERE
-        pass
-        return 0
+            x[x>0] = 1
+            x[x<=0] = 0
+        else:
+            np.maximum(x, 0, x)
+
+        if isnt_arr:
+            return x[0]
+        else:
+            return x
 
     def sigmoid(self, x, grad=False):
         if grad:
-            # WRITE CODE HERE
-            pass
-        # WRITE CODE HERE
-        pass
-        return 0
+            return self.sigmoid(x) - self.sigmoid(x)**2
+
+        return 1.0 / (1 + math.e ** (-x))
 
     def tanh(self, x, grad=False):
         if grad:
-            # WRITE CODE HERE
-            pass
-        # WRITE CODE HERE
-        pass
-        return 0
+            return 1-self.tanh(x)**2
+
+        isnt_arr = not (type(x) is np.array)
+        if isnt_arr:
+            x = np.array([x])
+
+        x = np.tanh(x)
+        if isnt_arr:
+            return x[0]
+        else:
+            return x
 
     def activation(self, x, grad=False):
         if self.activation_str == "relu":
-            # WRITE CODE HERE
-            pass
+            func = self.relu
         elif self.activation_str == "sigmoid":
-            # WRITE CODE HERE
-            pass
+            func = self.sigmoid
         elif self.activation_str == "tanh":
-            # WRITE CODE HERE
-            pass
+            func = self.tanh
         else:
             raise Exception("invalid")
-        return 0
+
+        return func(x, grad)
 
     def softmax(self, x):
-        # Remember that softmax(x-C) = softmax(x) when C is a constant.
-        # WRITE CODE HERE
-        pass
-        return 0
+        x -= np.max(x)
+        x = np.exp(x)
+        bot = np.sum(x)
+        return x/bot
 
     def forward(self, x):
         cache = {"Z0": x}
