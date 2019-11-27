@@ -139,7 +139,18 @@ class NN(object):
         output = cache[f"Z{self.n_hidden + 1}"]
         grads = {}
         # grads is a dictionary with keys dAm, dWm, dbm, dZ(m-1), dA(m-1), ..., dW1, db1
-        # WRITE CODE HERE
+
+        for layer_n in range(1, self.n_hidden + 2):
+            if layer_n == self.n_hidden + 1:
+                dZ = self.softmax(cache[f"Z{layer_n}"]) - self.one_hot(labels)  # dL/oa
+            else:
+                dZ = self.activation(cache[f"Z{layer_n}"], grad=True)
+
+            dW = np.outer(dZ, cache[f"Z{layer_n-1}"])    # d oa/dW2 * dL/oa
+            db = dZ
+            dA = dZ * self.weights[f"W{layer_n}"]
+
+
         pass
         return grads
 

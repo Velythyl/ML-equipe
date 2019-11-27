@@ -78,5 +78,3 @@ def softmax(x):
 
 print(softmax(np.array([3,4,3,-1])))
 print(softmax(np.array([[3,4,3,-1],[-1,3,4,5]])))
-print(softmax(2))
-print(softmax(-1))
