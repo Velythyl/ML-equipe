@@ -76,7 +76,7 @@ class NN(object):
             x[x>0] = 1
             x[x<=0] = 0
         else:
-            np.maximum(x, 0, x)
+            np.maximum(x, 0, out=x)
 
         if isnt_arr:
             return x[0]
@@ -116,10 +116,10 @@ class NN(object):
         return func(x, grad)
 
     def softmax(self, x):
-        x -= np.max(x)
-        x = np.exp(x)
-        bot = np.sum(x)
-        return x/bot
+        max = np.max(x, axis=1).reshape((x.shape[0], 1))
+        x = np.exp(x - max)
+        bot = np.sum(x, axis=1).reshape((x.shape[0], 1))
+        return x / bot
 
     def forward(self, x):
         cache = {"Z0": x}
@@ -204,8 +204,9 @@ class NN(object):
         return loss, accuracy
 
 #BONUS
-import matplotlib.pyplot as plt
 def bonus_1():
+    import matplotlib.pyplot as plt
+
     random.seed(0)
     nn = NN(lr=0.003, batch_size=100)
 
