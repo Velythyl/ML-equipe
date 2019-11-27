@@ -140,18 +140,30 @@ class NN(object):
         grads = {}
         # grads is a dictionary with keys dAm, dWm, dbm, dZ(m-1), dA(m-1), ..., dW1, db1
 
+        print(labels.shape)
+
         for layer_n in reversed(range(1, self.n_hidden + 2)):
             if layer_n == self.n_hidden + 1:
-                dZ = self.softmax(cache[f"Z{layer_n}"]) - self.one_hot(labels)  # dL/oa
+                dA = self.softmax(cache[f"Z{layer_n}"]) - labels  # dL/oa
             else:
-                dZ = self.activation(cache[f"Z{layer_n}"], grad=True)
+                dA = self.activation(cache[f"Z{layer_n}"], grad=True) * grads[f"dZ{layer_n+1}"]
+                grads[f"dA{layer_n}"] = dA
 
-            dW = np.outer(dZ, cache[f"Z{layer_n-1}"])    # d oa/dW2 * dL/oa
-            db = dZ
-            dA = dZ * self.weights[f"W{layer_n}"]
+            print(dA.shape)
+            print(cache[f"Z{layer_n-1}"].shape)
 
+            dW = (dA.T @ cache[f"Z{layer_n-1}"]).T / len(labels)    # d oa/dW2 * dL/oa
+            print("DW done")
+            db = np.mean(dA, axis=1)
+            print("DB DONE")
 
-        pass
+            dZ = dA @ self.weights[f"W{layer_n}"].T
+            print("DZ DONE")
+
+            grads[f"dW{layer_n}"] = dW
+            grads[f"db{layer_n}"] = db
+            grads[f"dZ{layer_n}"] = dZ
+
         return grads
 
     def update(self, grads):
