@@ -140,7 +140,7 @@ class NN(object):
         grads = {}
         # grads is a dictionary with keys dAm, dWm, dbm, dZ(m-1), dA(m-1), ..., dW1, db1
 
-        for layer_n in range(1, self.n_hidden + 2):
+        for layer_n in reversed(range(1, self.n_hidden + 2)):
             if layer_n == self.n_hidden + 1:
                 dZ = self.softmax(cache[f"Z{layer_n}"]) - self.one_hot(labels)  # dL/oa
             else:
