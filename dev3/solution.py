@@ -47,22 +47,10 @@ class NN(object):
         self.weights = {}
         # self.weights is a dictionary with keys W1, b1, W2, b2, ..., Wm, Bm where m - 1 is the number of hidden layers
 
-        """
-        Okay so! 
-            dims[1] est juste la dimension de l'input du NN. Genre le nb de shit que le premier layer recoit
-            dims[1] est le nombre de classes
-        Donc dans le fond, dims c'est ce qu'y manque a hidden_dims: c'est la couche d'input et la couche finale ish?
-            self.hidden_dims[i] est juste le nombre de neuronnes à la couche i
-            len(self.hidden_dims) est donc le nombre de couches
-        """
-
-
         all_dims = [dims[0]] + list(self.hidden_dims) + [dims[1]]
         for layer_n in range(1, self.n_hidden + 2):
-            bound = 1/math.sqrt(all_dims[layer_n])
-
-            self.weights[f"W{layer_n}"] = random.uniform(-bound, bound)
-            # WRITE CODE HERE
+            bound = 1/math.sqrt(all_dims[layer_n-1])
+            self.weights[f"W{layer_n}"] = np.random.uniform(-bound, bound, (all_dims[layer_n-1], all_dims[layer_n]))
             self.weights[f"b{layer_n}"] = np.zeros((1, all_dims[layer_n]))
 
     def relu(self, x, grad=False):
@@ -116,10 +104,20 @@ class NN(object):
         return func(x, grad)
 
     def softmax(self, x):
+        take_first = False
+        if len(x.shape) == 1:
+            take_first = True
+            x = x.reshape((1, x.shape[0]))
+
         max = np.max(x, axis=1).reshape((x.shape[0], 1))
         x = np.exp(x - max)
         bot = np.sum(x, axis=1).reshape((x.shape[0], 1))
-        return x / bot
+        ret = x / bot
+
+        if take_first:
+            return ret[0]
+        else:
+            return ret
 
     def forward(self, x):
         cache = {"Z0": x}
@@ -128,9 +126,12 @@ class NN(object):
         # WRITE CODE HERE
 
         for layer_n in range(1, self.n_hidden + 2):
-            preactivation = self.weights[f"W{layer_n}"]*cache[f"Z{layer_n-1}"] + self.weights[f"b{layer_n}"]
+            preactivation = np.matmul(cache[f"Z{layer_n-1}"], self.weights[f"W{layer_n}"]) + self.weights[f"b{layer_n}"]
             cache[f"A{layer_n}"] = preactivation
-            cache[f"Z{layer_n}"] = self.activation(preactivation)
+            if layer_n == self.n_hidden + 1:
+                cache[f"Z{layer_n}"] = self.softmax(preactivation)
+            else:
+                cache[f"Z{layer_n}"] = self.activation(preactivation)
 
         return cache
 

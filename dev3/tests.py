@@ -68,11 +68,15 @@ print(tanh(-1))
 
 
 def softmax(x):
+    if len(x.shape) == 1:
+        x = x.reshape((1, x.shape[0]))
+
     max = np.max(x, axis=1).reshape((x.shape[0], 1))
     x = np.exp(x - max)
     bot = np.sum(x, axis=1).reshape((x.shape[0], 1))
     return x / bot
 
+print(softmax(np.array([3,4,3,-1])))
 print(softmax(np.array([[3,4,3,-1],[-1,3,4,5]])))
 print(softmax(2))
 print(softmax(-1))
