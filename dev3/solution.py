@@ -282,4 +282,126 @@ def bonus_1():
     plt.legend()
     plt.show()
 
-bonus_1()
+#bonus_1()
+
+def bonus_3_1():
+    def iter(x):
+        return 1636146 + (x-1) * 14520
+
+    x = 0
+    goal = 1707274
+    diff = goal - iter(0)
+    best_x = 0
+    while True:
+        t = abs(iter(x) - goal)
+        if t < diff:
+            best_x = x
+            diff = t
+        if t > diff:
+            print(best_x)
+            print(iter(best_x))
+            break
+        x += 1
+
+def bonus_3_2():
+    import matplotlib.pyplot as plt
+    import time
+
+    nn = NN(lr=0.003, batch_size=100, verbose=True, seed=0, activation="relu", hidden_dims=(512,120,120,120,120,120,120), datapath="drive/My Drive/cifar10.pkl")
+
+
+    epochs_n = 50
+
+    start = time.time()
+    nn.train_loop(epochs_n)
+    print("Took",time.time()-start, "seconds to train")
+
+    epochs = list(np.arange(epochs_n))
+
+    train_acc = nn.train_logs['train_accuracy']
+    valid_acc = nn.train_logs['validation_accuracy']
+    plt.plot(epochs ,train_acc , label="Train accuracy")
+    plt.plot(epochs , valid_acc, label="Validation accuracy")
+    plt.legend()
+    plt.show()
+
+    train_loss = nn.train_logs['train_loss']
+    valid_loss = nn.train_logs['validation_loss']
+    plt.plot(epochs , train_loss, label="Train loss")
+    plt.plot(epochs , valid_loss, label="Validation loss")
+    plt.legend()
+    plt.show()
+
+#bonus_3_2()
+
+def bonus_4():
+    import matplotlib.pyplot as plt
+    import time
+
+    epochs_n = 50
+    epochs = list(np.arange(epochs_n))
+
+    t_a_1 = []
+    v_a_1 = []
+    t_a_2 = []
+    v_a_2 = []
+    t_l_1 = []
+    v_l_1 = []
+    t_l_2 = []
+    v_l_2 = []
+
+    logs = [[],[]]
+    for i in range(1, 4):
+        nn1 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu",
+                 hidden_dims=(512, 120, 120, 120, 120, 120, 120), datapath="drive/My Drive/cifar10.pkl")
+
+        nn2 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu", hidden_dims=(512,120,120,120,120,120,120), datapath="drive/My Drive/cifar10.pkl")
+
+        start = time.time()
+        nn1.train_loop(epochs_n)
+        nn2.train_loop(epochs_n)
+        print("Took",time.time()-start, "seconds to train the two NNs")
+
+        logs[0].append(nn1.train_logs)
+        logs[1].append(nn2.train_logs)
+
+        train_acc1 = nn1.train_logs['train_accuracy']
+        t_a_1.append(train_acc1)
+        valid_acc1 = nn1.train_logs['validation_accuracy']
+        v_a_1.append(valid_acc1)
+
+        train_acc2 = nn2.train_logs['train_accuracy']
+        t_a_2.append(train_acc2)
+        valid_acc2 = nn2.train_logs['validation_accuracy']
+        v_a_2.append(valid_acc2)
+
+        train_loss1 = nn1.train_logs['train_loss']
+        t_l_1.append(train_loss1)
+        valid_loss1 = nn1.train_logs['validation_loss']
+        v_l_1.append(valid_loss1)
+
+        train_loss2 = nn2.train_logs['train_loss']
+        t_l_2.append(train_loss2)
+        valid_loss2 = nn2.train_logs['validation_loss']
+        v_l_2.append(valid_loss2)
+
+    vocab = ["train_loss", "validation_loss", "train_accuracy", "validation_accuracy"]
+    dico = {}
+    for word in vocab:
+        for j in [0,1]:
+            for i in range(len(logs[0])):
+                key = word+str(j)
+                if key in dico:
+                    dico[key].append(key)
+            if word+str(i)
+            dico[word+str(i)] =
+
+    plt.plot(epochs, train_acc, label="Train accuracy")
+    plt.plot(epochs, valid_acc, label="Validation accuracy")
+    plt.legend()
+    plt.show()
+
+    plt.plot(epochs , train_loss, label="Train loss")
+    plt.plot(epochs , valid_loss, label="Validation loss")
+    plt.legend()
+    plt.show()
