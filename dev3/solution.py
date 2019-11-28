@@ -171,6 +171,7 @@ class NN(object):
 
             dZ = dA @ self.weights[f"W{layer_n}"].T
 
+
             grads[f"dW{layer_n}"] = dW
             grads[f"db{layer_n}"] = db
             grads[f"dZ{layer_n}"] = dZ
@@ -256,6 +257,7 @@ def bonus_1():
     import time
 
     nn = NN(lr=0.003, batch_size=100, verbose=True, seed=0, activation="relu", hidden_dims=(512,256))
+
 
     epochs_n = 50
 
