@@ -5,6 +5,7 @@ import random
 try:
     import cupy as np
 except ModuleNotFoundError:
+    print("Not using cupy")
     import numpy as np
 
 class NN(object):
@@ -17,7 +18,8 @@ class NN(object):
                  batch_size=1000,
                  seed=None,
                  activation="relu",
-                 init_method="glorot"
+                 init_method="glorot",
+                 verbose=False
                  ):
 
         self.hidden_dims = hidden_dims
@@ -30,6 +32,7 @@ class NN(object):
         self.seed = seed
         self.activation_str = activation
         self.epsilon = epsilon
+        self.verbose = verbose
 
         self.train_logs = {'train_accuracy': [], 'validation_accuracy': [], 'train_loss': [], 'validation_loss': []}
 
@@ -37,6 +40,10 @@ class NN(object):
             u = pickle._Unpickler(open(datapath, 'rb'))
             u.encoding = 'latin1'
             self.train, self.valid, self.test = u.load()
+
+            self.train = (np.asarray(self.train[0]), np.asarray(self.train[1]))
+            self.valid = (np.asarray(self.valid[0]), np.asarray(self.valid[1]))
+            self.test = (np.asarray(self.test[0]), np.asarray(self.test[1]))
         else:
             self.train, self.valid, self.test = None, None, None
 
@@ -47,26 +54,22 @@ class NN(object):
         self.weights = {}
         # self.weights is a dictionary with keys W1, b1, W2, b2, ..., Wm, Bm where m - 1 is the number of hidden layers
 
-        """
-        Okay so! 
-            dims[1] est juste la dimension de l'input du NN. Genre le nb de shit que le premier layer recoit
-            dims[1] est le nombre de classes
-        Donc dans le fond, dims c'est ce qu'y manque a hidden_dims: c'est la couche d'input et la couche finale ish?
-            self.hidden_dims[i] est juste le nombre de neuronnes à la couche i
-            len(self.hidden_dims) est donc le nombre de couches
-        """
-
-
         all_dims = [dims[0]] + list(self.hidden_dims) + [dims[1]]
         for layer_n in range(1, self.n_hidden + 2):
-            bound = 1/math.sqrt(all_dims[layer_n])
-
-            self.weights[f"W{layer_n}"] = random.uniform(-bound, bound)
-            # WRITE CODE HERE
+            bound = 1/math.sqrt(all_dims[layer_n-1])
+            self.weights[f"W{layer_n}"] = np.random.uniform(-bound, bound, (all_dims[layer_n-1], all_dims[layer_n]))
             self.weights[f"b{layer_n}"] = np.zeros((1, all_dims[layer_n]))
 
+    def is_numeirc(self, x):
+        try:
+            temp = x.shape
+            return False
+        except:
+            return True
+
     def relu(self, x, grad=False):
-        isnt_arr = not (type(x) is np.array)
+        isnt_arr = self.is_numeirc(x)
+
         if isnt_arr:
             x = np.array([x])
         else:
@@ -76,7 +79,7 @@ class NN(object):
             x[x>0] = 1
             x[x<=0] = 0
         else:
-            np.maximum(x, 0, x)
+            np.maximum(x, 0, out=x)
 
         if isnt_arr:
             return x[0]
@@ -93,11 +96,15 @@ class NN(object):
         if grad:
             return 1-self.tanh(x)**2
 
-        isnt_arr = not (type(x) is np.array)
+        isnt_arr = self.is_numeirc(x)
         if isnt_arr:
             x = np.array([x])
 
-        x = np.tanh(x)
+        #x = np.tanh(x)
+
+        e2x = np.exp(2*x)
+        x = (e2x - 1) / (e2x + 1)
+
         if isnt_arr:
             return x[0]
         else:
@@ -116,10 +123,20 @@ class NN(object):
         return func(x, grad)
 
     def softmax(self, x):
-        x -= np.max(x)
-        x = np.exp(x)
-        bot = np.sum(x)
-        return x/bot
+        take_first = False
+        if len(x.shape) == 1:
+            take_first = True
+            x = x.reshape((1, x.shape[0]))
+
+        max = np.max(x, axis=1).reshape((x.shape[0], 1))
+        x = np.exp(x - max)
+        bot = np.sum(x, axis=1).reshape((x.shape[0], 1))
+        ret = x / bot
+
+        if take_first:
+            return ret[0]
+        else:
+            return ret
 
     def forward(self, x):
         cache = {"Z0": x}
@@ -128,9 +145,12 @@ class NN(object):
         # WRITE CODE HERE
 
         for layer_n in range(1, self.n_hidden + 2):
-            preactivation = self.weights[f"W{layer_n}"]*cache[f"Z{layer_n-1}"] + self.weights[f"b{layer_n}"]
+            preactivation = np.matmul(cache[f"Z{layer_n-1}"], self.weights[f"W{layer_n}"]) + self.weights[f"b{layer_n}"]
             cache[f"A{layer_n}"] = preactivation
-            cache[f"Z{layer_n}"] = self.activation(preactivation)
+            if layer_n == self.n_hidden + 1:
+                cache[f"Z{layer_n}"] = self.softmax(preactivation)
+            else:
+                cache[f"Z{layer_n}"] = self.activation(preactivation)
 
         return cache
 
@@ -138,8 +158,23 @@ class NN(object):
         output = cache[f"Z{self.n_hidden + 1}"]
         grads = {}
         # grads is a dictionary with keys dAm, dWm, dbm, dZ(m-1), dA(m-1), ..., dW1, db1
-        # WRITE CODE HERE
-        pass
+
+        for layer_n in reversed(range(1, self.n_hidden + 2)):
+            if layer_n == self.n_hidden + 1:
+                dA = cache[f"Z{layer_n}"] - labels  # dL/oa
+            else:
+                dA = self.activation(cache[f"Z{layer_n}"], grad=True) * grads[f"dZ{layer_n+1}"]
+                grads[f"dA{layer_n}"] = dA
+
+            dW = (dA.T @ cache[f"Z{layer_n-1}"]).T / len(labels)    # d oa/dW2 * dL/oa
+            db = np.mean(dA, axis=0, keepdims=True)
+
+            dZ = dA @ self.weights[f"W{layer_n}"].T
+
+            grads[f"dW{layer_n}"] = dW
+            grads[f"db{layer_n}"] = db
+            grads[f"dZ{layer_n}"] = dZ
+
         return grads
 
     def update(self, grads):
@@ -155,9 +190,17 @@ class NN(object):
     def loss(self, prediction, labels):
         prediction[np.where(prediction < self.epsilon)] = self.epsilon
         prediction[np.where(prediction > 1 - self.epsilon)] = 1 - self.epsilon
-        # WRITE CODE HERE
-        pass
-        return 0
+
+        """
+        reduced = prediction[np.argmax(labels,axis=1).reshape(-1,1)]
+        reduced = np.mean(np.log(reduced))
+        return -reduced"""
+
+        t = np.log(prediction) * labels
+        t = np.sum(t, axis=1)
+        t = np.mean(t)
+
+        return -t
 
     def compute_loss_and_accuracy(self, X, y):
         one_y = self.one_hot(y)
@@ -176,6 +219,7 @@ class NN(object):
         n_batches = int(np.ceil(X_train.shape[0] / self.batch_size))
 
         for epoch in range(n_epochs):
+
             for batch in range(n_batches):
                 minibatchX = X_train[self.batch_size * batch:self.batch_size * (batch + 1), :]
                 minibatchY = y_onehot[self.batch_size * batch:self.batch_size * (batch + 1), :]
@@ -185,6 +229,9 @@ class NN(object):
                 backward = self.backward(forward, minibatchY)
                 self.update(backward)
                 # FIN MA PARTIE
+
+            if self.verbose:
+                print(epoch+1, "of", n_epochs, "done!")
 
             X_train, y_train = self.train
             train_loss, train_accuracy, _ = self.compute_loss_and_accuracy(X_train, y_train)
@@ -204,14 +251,17 @@ class NN(object):
         return loss, accuracy
 
 #BONUS
-import matplotlib.pyplot as plt
 def bonus_1():
-    random.seed(0)
-    nn = NN(lr=0.003, batch_size=100)
+    import matplotlib.pyplot as plt
+    import time
+
+    nn = NN(lr=0.003, batch_size=100, verbose=True, seed=0, activation="relu", hidden_dims=(512,256))
 
     epochs_n = 50
 
+    start = time.time()
     nn.train_loop(epochs_n)
+    print("Took",time.time()-start, "seconds to train")
 
     epochs = list(np.arange(epochs_n))
 
@@ -228,3 +278,5 @@ def bonus_1():
     plt.plot(epochs , valid_loss, label="Validation loss")
     plt.legend()
     plt.show()
+
+bonus_1()
