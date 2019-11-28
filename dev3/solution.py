@@ -3,8 +3,10 @@ import pickle
 import random
 
 try:
+    #!pip install cupy-cuda101
     import cupy as np
 except ModuleNotFoundError:
+    print("Not using cupy")
     import numpy as np
 
 class NN(object):
@@ -17,7 +19,8 @@ class NN(object):
                  batch_size=1000,
                  seed=None,
                  activation="relu",
-                 init_method="glorot"
+                 init_method="glorot",
+                 verbose=False
                  ):
 
         self.hidden_dims = hidden_dims
@@ -30,6 +33,7 @@ class NN(object):
         self.seed = seed
         self.activation_str = activation
         self.epsilon = epsilon
+        self.verbose = verbose
 
         self.train_logs = {'train_accuracy': [], 'validation_accuracy': [], 'train_loss': [], 'validation_loss': []}
 
@@ -37,6 +41,10 @@ class NN(object):
             u = pickle._Unpickler(open(datapath, 'rb'))
             u.encoding = 'latin1'
             self.train, self.valid, self.test = u.load()
+
+            self.train = (np.asarray(self.train[0]), np.asarray(self.train[1]))
+            self.valid = (np.asarray(self.valid[0]), np.asarray(self.valid[1]))
+            self.test = (np.asarray(self.test[0]), np.asarray(self.test[1]))
         else:
             self.train, self.valid, self.test = None, None, None
 
@@ -53,8 +61,16 @@ class NN(object):
             self.weights[f"W{layer_n}"] = np.random.uniform(-bound, bound, (all_dims[layer_n-1], all_dims[layer_n]))
             self.weights[f"b{layer_n}"] = np.zeros((1, all_dims[layer_n]))
 
+    def is_numeirc(self, x):
+        try:
+            temp = x.shape
+            return False
+        except:
+            return True
+
     def relu(self, x, grad=False):
-        isnt_arr = not (type(x) is np.array)
+        isnt_arr = self.is_numeirc(x)
+
         if isnt_arr:
             x = np.array([x])
         else:
@@ -81,11 +97,15 @@ class NN(object):
         if grad:
             return 1-self.tanh(x)**2
 
-        isnt_arr = not (type(x) is np.array)
+        isnt_arr = self.is_numeirc(x)
         if isnt_arr:
             x = np.array([x])
 
-        x = np.tanh(x)
+        #x = np.tanh(x)
+
+        e2x = np.exp(2*x)
+        x = (e2x - 1) / (e2x + 1)
+
         if isnt_arr:
             return x[0]
         else:
@@ -140,8 +160,6 @@ class NN(object):
         grads = {}
         # grads is a dictionary with keys dAm, dWm, dbm, dZ(m-1), dA(m-1), ..., dW1, db1
 
-        print(labels.shape)
-
         for layer_n in reversed(range(1, self.n_hidden + 2)):
             if layer_n == self.n_hidden + 1:
                 dA = cache[f"Z{layer_n}"] - labels  # dL/oa
@@ -149,16 +167,11 @@ class NN(object):
                 dA = self.activation(cache[f"Z{layer_n}"], grad=True) * grads[f"dZ{layer_n+1}"]
                 grads[f"dA{layer_n}"] = dA
 
-            print(dA.shape)
-            print(cache[f"Z{layer_n-1}"].shape)
-
             dW = (dA.T @ cache[f"Z{layer_n-1}"]).T / len(labels)    # d oa/dW2 * dL/oa
-            print("DW done")
             db = np.mean(dA, axis=0, keepdims=True)
-            print("DB DONE")
 
             dZ = dA @ self.weights[f"W{layer_n}"].T
-            print("DZ DONE")
+
 
             grads[f"dW{layer_n}"] = dW
             grads[f"db{layer_n}"] = db
@@ -179,9 +192,17 @@ class NN(object):
     def loss(self, prediction, labels):
         prediction[np.where(prediction < self.epsilon)] = self.epsilon
         prediction[np.where(prediction > 1 - self.epsilon)] = 1 - self.epsilon
-        # WRITE CODE HERE
-        pass
-        return 0
+
+        """
+        reduced = prediction[np.argmax(labels,axis=1).reshape(-1,1)]
+        reduced = np.mean(np.log(reduced))
+        return -reduced"""
+
+        t = np.log(prediction) * labels
+        t = np.sum(t, axis=1)
+        t = np.mean(t)
+
+        return -t
 
     def compute_loss_and_accuracy(self, X, y):
         one_y = self.one_hot(y)
@@ -200,6 +221,7 @@ class NN(object):
         n_batches = int(np.ceil(X_train.shape[0] / self.batch_size))
 
         for epoch in range(n_epochs):
+
             for batch in range(n_batches):
                 minibatchX = X_train[self.batch_size * batch:self.batch_size * (batch + 1), :]
                 minibatchY = y_onehot[self.batch_size * batch:self.batch_size * (batch + 1), :]
@@ -209,6 +231,9 @@ class NN(object):
                 backward = self.backward(forward, minibatchY)
                 self.update(backward)
                 # FIN MA PARTIE
+
+            if self.verbose:
+                print(epoch+1, "of", n_epochs, "done!")
 
             X_train, y_train = self.train
             train_loss, train_accuracy, _ = self.compute_loss_and_accuracy(X_train, y_train)
@@ -230,13 +255,16 @@ class NN(object):
 #BONUS
 def bonus_1():
     import matplotlib.pyplot as plt
+    import time
 
-    random.seed(0)
-    nn = NN(lr=0.003, batch_size=100)
+    nn = NN(lr=0.003, batch_size=100, verbose=True, seed=0, activation="relu", hidden_dims=(512,256), datapath="drive/My Drive/cifar10.pkl")
+
 
     epochs_n = 50
 
+    start = time.time()
     nn.train_loop(epochs_n)
+    print("Took",time.time()-start, "seconds to train")
 
     epochs = list(np.arange(epochs_n))
 
@@ -253,3 +281,5 @@ def bonus_1():
     plt.plot(epochs , valid_loss, label="Validation loss")
     plt.legend()
     plt.show()
+
+bonus_1()
