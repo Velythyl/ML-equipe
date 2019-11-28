@@ -144,7 +144,7 @@ class NN(object):
 
         for layer_n in reversed(range(1, self.n_hidden + 2)):
             if layer_n == self.n_hidden + 1:
-                dA = self.softmax(cache[f"Z{layer_n}"]) - labels  # dL/oa
+                dA = cache[f"Z{layer_n}"] - labels  # dL/oa
             else:
                 dA = self.activation(cache[f"Z{layer_n}"], grad=True) * grads[f"dZ{layer_n+1}"]
                 grads[f"dA{layer_n}"] = dA
@@ -154,7 +154,7 @@ class NN(object):
 
             dW = (dA.T @ cache[f"Z{layer_n-1}"]).T / len(labels)    # d oa/dW2 * dL/oa
             print("DW done")
-            db = np.mean(dA, axis=1)
+            db = np.mean(dA, axis=0, keepdims=True)
             print("DB DONE")
 
             dZ = dA @ self.weights[f"W{layer_n}"].T
