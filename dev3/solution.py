@@ -338,15 +338,15 @@ def bonus_4():
     import matplotlib.pyplot as plt
     import time
 
-    epochs_n = 2
-    epochs = list(np.arange(epochs_n))
+    epochs_n = 50
+    epochs = [i for i in range(epochs_n)]
 
     logs = [[],[]]
     for i in range(1, 4):
         nn1 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu",
-                 hidden_dims=(512, 120, 120, 120, 120, 120, 120))#, datapath="drive/My Drive/cifar10.pkl")
+                 hidden_dims=(512,256), datapath="drive/My Drive/cifar10.pkl")
 
-        nn2 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu", hidden_dims=(512,120,120,120,120,120,120))#), datapath="drive/My Drive/cifar10.pkl")
+        nn2 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu", hidden_dims=(512,120,120,120,120,120,120), datapath="drive/My Drive/cifar10.pkl")
 
         nn1.train_loop(epochs_n)
         nn2.train_loop(epochs_n)
@@ -360,8 +360,6 @@ def bonus_4():
         for j in [0,1]:
             for i in range(len(logs[0])):
                 item = logs[j][i][word]
-
-                print(item)
                 key = word+"_NN"+str(j+1)
                 if key in dico:
                     dico[key].append(item)
@@ -369,24 +367,20 @@ def bonus_4():
                     dico[key] = [item]
 
     for key in dico.keys():
-        print("pre-arr")
         try:
             arr = np.array(dico[key])
-        except:
+        except Exception:
             for l in dico[key]:
-                for i, ele in l:
-                    l[i] = ele[0]
+                for i, ele in enumerate(l):
+                    l[i] = float(ele)
             arr = np.array(dico[key])
-        print("post-arr")
 
-        mean = np.mean(arr, axis=0)
-        print("mean")
-        std = np.std(arr, axis=0)
-        print("std")
+        mean = list(np.mean(arr, axis=0))
+        std = list(10 * np.std(arr, axis=0))
 
         plt.errorbar(epochs, mean, std, label=key.replace("_", " "))
 
     plt.legend()
     plt.show()
 
-bonus_4()
+#bonus_4()
