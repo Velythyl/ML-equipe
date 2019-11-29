@@ -269,6 +269,7 @@ def bonus_1():
     epochs = list(np.arange(epochs_n))
 
     train_acc = nn.train_logs['train_accuracy']
+    print(train_acc)
     valid_acc = nn.train_logs['validation_accuracy']
     plt.plot(epochs ,train_acc , label="Train accuracy")
     plt.plot(epochs , valid_acc, label="Validation accuracy")
@@ -282,7 +283,6 @@ def bonus_1():
     plt.legend()
     plt.show()
 
-#bonus_1()
 
 def bonus_3_1():
     def iter(x):
@@ -338,70 +338,55 @@ def bonus_4():
     import matplotlib.pyplot as plt
     import time
 
-    epochs_n = 50
+    epochs_n = 2
     epochs = list(np.arange(epochs_n))
-
-    t_a_1 = []
-    v_a_1 = []
-    t_a_2 = []
-    v_a_2 = []
-    t_l_1 = []
-    v_l_1 = []
-    t_l_2 = []
-    v_l_2 = []
 
     logs = [[],[]]
     for i in range(1, 4):
         nn1 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu",
-                 hidden_dims=(512, 120, 120, 120, 120, 120, 120), datapath="drive/My Drive/cifar10.pkl")
+                 hidden_dims=(512, 120, 120, 120, 120, 120, 120))#, datapath="drive/My Drive/cifar10.pkl")
 
-        nn2 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu", hidden_dims=(512,120,120,120,120,120,120), datapath="drive/My Drive/cifar10.pkl")
+        nn2 = NN(lr=0.003, batch_size=100, verbose=True, seed=i, activation="relu", hidden_dims=(512,120,120,120,120,120,120))#), datapath="drive/My Drive/cifar10.pkl")
 
-        start = time.time()
         nn1.train_loop(epochs_n)
         nn2.train_loop(epochs_n)
-        print("Took",time.time()-start, "seconds to train the two NNs")
 
         logs[0].append(nn1.train_logs)
         logs[1].append(nn2.train_logs)
 
-        train_acc1 = nn1.train_logs['train_accuracy']
-        t_a_1.append(train_acc1)
-        valid_acc1 = nn1.train_logs['validation_accuracy']
-        v_a_1.append(valid_acc1)
-
-        train_acc2 = nn2.train_logs['train_accuracy']
-        t_a_2.append(train_acc2)
-        valid_acc2 = nn2.train_logs['validation_accuracy']
-        v_a_2.append(valid_acc2)
-
-        train_loss1 = nn1.train_logs['train_loss']
-        t_l_1.append(train_loss1)
-        valid_loss1 = nn1.train_logs['validation_loss']
-        v_l_1.append(valid_loss1)
-
-        train_loss2 = nn2.train_logs['train_loss']
-        t_l_2.append(train_loss2)
-        valid_loss2 = nn2.train_logs['validation_loss']
-        v_l_2.append(valid_loss2)
-
-    vocab = ["train_loss", "validation_loss", "train_accuracy", "validation_accuracy"]
+    vocab = ["train_accuracy", "validation_accuracy"]
     dico = {}
     for word in vocab:
         for j in [0,1]:
             for i in range(len(logs[0])):
-                key = word+str(j)
+                item = logs[j][i][word]
+
+                print(item)
+                key = word+"_NN"+str(j+1)
                 if key in dico:
-                    dico[key].append(key)
-            if word+str(i)
-            dico[word+str(i)] =
+                    dico[key].append(item)
+                else:
+                    dico[key] = [item]
 
-    plt.plot(epochs, train_acc, label="Train accuracy")
-    plt.plot(epochs, valid_acc, label="Validation accuracy")
+    for key in dico.keys():
+        print("pre-arr")
+        try:
+            arr = np.array(dico[key])
+        except:
+            for l in dico[key]:
+                for i, ele in l:
+                    l[i] = ele[0]
+            arr = np.array(dico[key])
+        print("post-arr")
+
+        mean = np.mean(arr, axis=0)
+        print("mean")
+        std = np.std(arr, axis=0)
+        print("std")
+
+        plt.errorbar(epochs, mean, std, label=key.replace("_", " "))
+
     plt.legend()
     plt.show()
 
-    plt.plot(epochs , train_loss, label="Train loss")
-    plt.plot(epochs , valid_loss, label="Validation loss")
-    plt.legend()
-    plt.show()
+bonus_4()
